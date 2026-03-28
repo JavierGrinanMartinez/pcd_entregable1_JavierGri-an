@@ -7,3 +7,5 @@ class AccesoDenegadoError(Exception):
 class StockInsuficienteError(Exception):
     pass
 
+class ComandanteExistenteError(Exception):
+    pass

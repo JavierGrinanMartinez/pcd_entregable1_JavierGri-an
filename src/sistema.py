@@ -95,9 +95,9 @@ class Sistema:
                 break
         
         if almacen_origen == None:
-            raise ValueError("El almacen no se encuentra en la base de datos de almacenes")
+            raise ValueError("No se encontró el almacén especificado.")
 
-        repuesto = almacen_origen.buscarbuscar_repuesto(nombre_repuesto)
+        repuesto = almacen_origen.buscar_repuesto(nombre_repuesto)
         if repuesto == -1:
             raise ValueError("no se encontro el repuesto en el almacen,\n prueba comprobar el nombre")
         
@@ -110,6 +110,83 @@ class Sistema:
         nave_asignada.añadir_repuestos(repuesto)
         
         return f"se añadio la cantidad indicada del repuesto indicado del almacen indicado" #decorar esta mierda de salida
+
+    def consultar_nave(self):
+            
+        """
+        Sirve para poder revisar facilmente el numero de repuestos de la nave
+        esto funciona por la suma de cadena de texto
+
+        por cada repuesto en la lista de repuestos suma a la cadena original el get_nombre
+        y get_cantidad 
+        """
+        if not isinstance(self.get_usuario_activo(),Comandante):
+            raise AccesoDenegadoError("el usuario no es de teipo comandante")
+        
+        nave_asignada = self.get_usuario_activo().get_nave()
+        lista_repuestos = nave_asignada.get_repuestos()
+
+
+        if len(lista_repuestos) == 0:
+            return "No hay repuestos"
+
+        resultado = "--------- Numero de repuestos\n"
+            
+        for repuesto in lista_repuestos:
+            resultado += f"- {repuesto.get_nombre()} - {repuesto.get_cantidad()}\n " 
+            
+
+        return resultado
+    
+    def enviar_mensaje(self, clave_destino: int, mensaje: str):
+
+        """
+        el motivo por el que pide la clave destino es para buscar dentro 
+        de la pool de naves del sistema cual coincide con ese numero, 
+        como si fuera un numero de telefono
+
+        el porque no pide la nave de origen es porque este metodo solo 
+        se puede ejecutar siendo COMANDANTE y accede a su nave directamente
+
+        luego formatea el string y lo mete en la nave destino
+        """
+        if not isinstance(self.get_usuario_activo(),Comandante):
+            raise AccesoDenegadoError("el usuario no es de teipo comandante")
+        
+        nave_origen = self.get_usuario_activo().get_nave()
+        nave_destino = None
+        
+
+        for nave in self.get_naves():
+
+            if nave.get_clave() == clave_destino:
+                nave_destino = nave
+                break
+                
+        if nave_destino is None:
+            raise ValueError(f"No hay ninguna nave con clave {clave_destino}.")
+            
+        texto_final = f"De {nave_origen.get_nombre()} ({nave_origen.get_identificador()}): {mensaje}"
+        nave_destino.recibir_mensaje(texto_final)
+        
+        return "Mensaje transmitido."
+
+    def consultar_mensajes(self):
+
+        """
+        El metodo no pide parametros porque solo lee la bandeja
+        de entrada de la nave asignada al usuario activo
+
+        primero comprueba que el usuario sea tipo COMANDANTE
+        y despues simplemente saca su nave y devuelve la lista cruda 
+        de mensajes que tiene guardados usando el metodo de la nave    
+        """
+
+        if not isinstance(self.get_usuario_activo(),Comandante):
+            raise AccesoDenegadoError("el usuario no es de teipo comandante")
+        
+        nave_actual = self.get_usuario_activo().get_nave()
+        return nave_actual.leer_mensajes()
 
     #metodos de almacen-operario
     def crear_repuesto(self,nombre:str, proveedor:str, cantidad:int, coste:float):
@@ -132,7 +209,7 @@ class Sistema:
         
         almacen_asignado = self.get_usuario_activo().get_almacen()
 
-        if almacen_asignado.buscar_repuesto(nombre): #comprueba si ya existe
+        if almacen_asignado.buscar_repuesto(nombre) != -1 : #comprueba si ya existe
             raise ValueError("ya existe el repuesto")
         
         nuevo_repuesto = Repuesto(nombre,proveedor,cantidad,coste)
@@ -142,12 +219,20 @@ class Sistema:
 
     def actualizar_stock(self,nombre_repuesto:str, cantidad_sumar:int):
 
-        """"""
+        """
+        el motivo por el que no pide el almacen es porque este metodo solo 
+        se puede ejecutar siendo OPERARIO y ya tiene un almacen asignado 
+        al que accede directamente
+
+        despues busca el repuesto indicado dentro de su propio almacen,
+        saca la cantidad actual, le suma la cantidad nueva y la vuelve a
+        guardar modificando el objeto
+        """
 
         if not isinstance(self.get_usuario_activo(),Operario):
             raise AccesoDenegadoError("el usuario no es de teipo OPERARIO")
         
-        almacen_asignado = self.get_usuario_activo().get_set_almacen()
+        almacen_asignado = self.get_usuario_activo().get_almacen()
         repuetso = almacen_asignado.buscar_repuesto(nombre_repuesto)
 
         if repuetso == -1:
@@ -158,3 +243,30 @@ class Sistema:
         repuetso.set_cantidad(nueva_cantidad)
 
         return "repuesto actualizado" #decorar la salida...
+    
+    def consultar_almacen(self):
+
+        """
+        el motivo por el que no pide de que almacen sacar los datos es 
+        porque asume que el usuario es OPERARIO y accede directamente 
+        a su lugar de trabajo
+
+        luego saca la lista de piezas y comprueba si esta vacia,
+        si no lo esta, hace un bucle para sacar el nombre y la cantidad 
+        de cada repuesto y devuelve un string ya formateado para imprimir
+        """
+
+        almacen_asignado = self.get_usuario_activo().get_almacen()
+        lista_repuestos = almacen_asignado.get_catalogo()
+
+
+        if len(lista_repuestos) == 0:
+            return "No hay repuestos"
+
+        resultado = "---------\n"
+            
+        for repuesto in lista_repuestos:
+            resultado += f"- {repuesto.get_nombre()} - {repuesto.get_cantidad()}\n " 
+            
+
+        return resultado
